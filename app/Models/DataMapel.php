@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class DataMapel extends Model
+{
+    protected $table = 'data_mapel';
+
+    protected $fillable = [
+        'nama_mapel',
+        'kelompok_mapel',
+    ];
+
+    // Relasi (dipakai nanti di pembelajaran)
+    public function pembelajaran()
+    {
+        return $this->hasMany(DataPembelajaran::class, 'data_mapel_id');
+    }
+}
