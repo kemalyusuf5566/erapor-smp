@@ -18,4 +18,9 @@ class DataMapel extends Model
     {
         return $this->hasMany(DataPembelajaran::class, 'data_mapel_id');
     }
+
+    public function nilaiSiswa()
+    {
+        return $this->hasMany(NilaiMapelSiswa::class, 'data_mapel_id');
+    }
 }

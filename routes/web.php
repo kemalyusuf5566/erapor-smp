@@ -1,133 +1,170 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\DataKelasController;
+use App\Http\Controllers\ProfileController;
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CONTROLLERS
+|--------------------------------------------------------------------------
+*/
 use App\Http\Controllers\Admin\DataSiswaController;
-use App\Http\Controllers\Admin\DataMapelController;
-use App\Http\Controllers\Admin\DataPembelajaranController;
-use App\Http\Controllers\Guru\NilaiController;
-use App\Http\Controllers\Guru\PembelajaranController;
-use App\Http\Controllers\Wali\KelasController;
-use App\Http\Controllers\Wali\SiswaController;
-use App\Http\Controllers\Wali\KehadiranController;
-use App\Http\Controllers\Wali\CatatanController;
-use App\Http\Controllers\Wali\LegerController;
-use App\Http\Controllers\Wali\KelengkapanController;
-use App\Http\Controllers\Wali\RaporController;
-use App\Http\Controllers\Wali\CetakRaporController;
 use App\Http\Controllers\Admin\DataGuruController;
 use App\Http\Controllers\Admin\DataAdminController;
 use App\Http\Controllers\Admin\DataSekolahController;
 use App\Http\Controllers\Admin\DataTahunPelajaranController;
+use App\Http\Controllers\Admin\DataKelasController;
+use App\Http\Controllers\Admin\DataMapelController;
+use App\Http\Controllers\Admin\DataPembelajaranController;
 use App\Http\Controllers\Admin\DataEkstrakurikulerController;
+
+// KOKURIKULER
+use App\Http\Controllers\Admin\KkDimensiController;
+use App\Http\Controllers\Admin\KkKegiatanController;
+use App\Http\Controllers\Admin\KkKelompokController;
+
+// RAPOR (TANPA subfolder Rapor)
+use App\Http\Controllers\Admin\LegerNilaiController;
+use App\Http\Controllers\Admin\CetakRaporController;
+use App\Http\Controllers\Admin\KelengkapanRaporPdfController;
+use App\Http\Controllers\Admin\RaporSemesterPdfController;
+
+/*
+|--------------------------------------------------------------------------
+| GURU CONTROLLERS
+|--------------------------------------------------------------------------
+*/
+use App\Http\Controllers\Guru\PembelajaranController;
+use App\Http\Controllers\Guru\NilaiController;
+
+/*
+|--------------------------------------------------------------------------
+| ROOT
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Route::get('/dashboard', function () {
-//     return view('dashboard');
-// })->middleware(['auth', 'verified'])->name('dashboard');
-Route::middleware(['auth','role:admin'])
+/*
+|--------------------------------------------------------------------------
+| ADMIN AREA
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
 
-        Route::get('/dashboard', function () {
+        Route::get('dashboard', function () {
             return view('admin.dashboard');
         })->name('dashboard');
 
-        
-        Route::resource('kelas', DataKelasController::class);
+        // MASTER DATA
         Route::resource('siswa', DataSiswaController::class);
         Route::resource('guru', DataGuruController::class);
-        Route::get('guru/{guru}/detail', [DataGuruController::class, 'detail'])
-            ->name('guru.detail');
         Route::resource('admin', DataAdminController::class);
-        Route::resource('mapel', DataMapelController::class);
-        Route::resource('pembelajaran', DataPembelajaranController::class);
+
+        // ADMINISTRASI
         Route::resource('sekolah', DataSekolahController::class)
             ->except(['show', 'destroy']);
 
-        Route::get('/tahun-pelajaran', [DataTahunPelajaranController::class, 'index'])
+        // TAHUN PELAJARAN
+        Route::get('tahun-pelajaran', [DataTahunPelajaranController::class, 'index'])
             ->name('tahun.index');
-
-        Route::post('/tahun-pelajaran', [DataTahunPelajaranController::class, 'store'])
+        Route::post('tahun-pelajaran', [DataTahunPelajaranController::class, 'store'])
             ->name('tahun.store');
-
-        Route::put('/tahun-pelajaran/{id}', [DataTahunPelajaranController::class, 'update'])
+        Route::put('tahun-pelajaran/{id}', [DataTahunPelajaranController::class, 'update'])
             ->name('tahun.update');
-
-        Route::put('/tahun-pelajaran/{id}/aktif', [DataTahunPelajaranController::class, 'setAktif'])
+        Route::put('tahun-pelajaran/{id}/aktif', [DataTahunPelajaranController::class, 'setAktif'])
             ->name('tahun.aktif');
+
+        // ADMINISTRASI LANJUTAN
+        Route::resource('kelas', DataKelasController::class);
+        Route::resource('mapel', DataMapelController::class);
+        Route::resource('pembelajaran', DataPembelajaranController::class);
         Route::resource('ekstrakurikuler', DataEkstrakurikulerController::class);
 
-    
-        });
+        /*
+        |--------------------------------------------------------------------------
+        | KOKURIKULER
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('kokurikuler')
+            ->name('kokurikuler.')
+            ->group(function () {
+                Route::resource('dimensi', KkDimensiController::class);
+                Route::resource('kegiatan', KkKegiatanController::class);
+                Route::resource('kelompok', KkKelompokController::class);
+            });
 
-    Route::middleware(['auth','role:guru_mapel'])
+        /*
+        |--------------------------------------------------------------------------
+        | RAPOR
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('rapor')
+            ->name('rapor.')
+            ->group(function () {
+
+                // LEGER NILAI
+                Route::get('leger', [LegerNilaiController::class, 'index'])
+                    ->name('leger');
+                Route::get('leger/{kelas}', [LegerNilaiController::class, 'detail'])
+                    ->name('leger.detail');
+
+                // CETAK RAPOR
+                Route::get('cetak', [CetakRaporController::class, 'index'])
+                    ->name('cetak');
+                Route::get('cetak/{kelas}', [CetakRaporController::class, 'detail'])
+                    ->name('cetak.detail');
+
+                // PDF
+                Route::get('pdf/kelengkapan/{siswa}', [KelengkapanRaporPdfController::class, 'show'])
+                    ->name('pdf.kelengkapan');
+
+                Route::get('pdf/semester/{siswa}', [RaporSemesterPdfController::class, 'show'])
+                    ->name('pdf.semester');
+            });
+    });
+
+/*
+|--------------------------------------------------------------------------
+| GURU AREA
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])
     ->prefix('guru')
+    ->name('guru.')
     ->group(function () {
 
-        Route::get('/dashboard', function () {
+        Route::get('dashboard', function () {
             return view('guru.dashboard');
-        })->name('guru.dashboard');
+        })->name('dashboard');
 
-        Route::get('/pembelajaran', [PembelajaranController::class, 'index'])
-            ->name('guru.pembelajaran');
+        Route::get('pembelajaran', [PembelajaranController::class, 'index'])
+            ->name('pembelajaran');
 
-        Route::get('/nilai/{pembelajaran}', [NilaiController::class, 'index'])
-            ->name('guru.nilai');
+        Route::get('nilai/{pembelajaran}', [NilaiController::class, 'index'])
+            ->name('nilai');
 
-        Route::post('/nilai', [NilaiController::class, 'store'])
-            ->name('guru.nilai.store');
-            
-    });
-Route::middleware(['auth','role:wali_kelas'])
-    ->prefix('wali-kelas')
-    ->group(function () {
-
-        Route::get('/dashboard', function () {
-            return view('wali.dashboard');
-        })->name('wali.dashboard');
-
-        Route::get('/kelas', [KelasController::class, 'index'])
-            ->name('wali.kelas');
-
-        Route::get('/siswa/{kelas}', [SiswaController::class, 'index'])
-            ->name('wali.siswa');
-
-        Route::get('/kehadiran/{siswa}', [KehadiranController::class, 'edit'])
-            ->name('wali.kehadiran');
-
-        Route::post('/kehadiran', [KehadiranController::class, 'store'])
-            ->name('wali.kehadiran.store');
-
-        Route::get('/catatan/{siswa}', [CatatanController::class, 'edit'])
-            ->name('wali.catatan');
-
-        Route::post('/catatan', [CatatanController::class, 'store'])
-            ->name('wali.catatan.store');
-        Route::get('/rapor/leger', [LegerController::class,'index'])
-            ->name('wali.leger');
-        Route::get('/rapor/kelengkapan', [KelengkapanController::class,'index'])
-            ->name('wali.rapor.kelengkapan');
-        Route::get('/rapor/preview/{siswa}', [RaporController::class,'show'])
-            ->name('wali.rapor.preview');
-        Route::get('/rapor/cetak/{siswa}', [CetakRaporController::class,'semester'])
-            ->name('wali.rapor.cetak');
-
-
-
+        Route::post('nilai', [NilaiController::class, 'store'])
+            ->name('nilai.store');
     });
 
-
-
+/*
+|--------------------------------------------------------------------------
+| PROFILE
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+    Route::patch('profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+    Route::delete('profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

@@ -56,4 +56,9 @@ class DataSiswa extends Model
     {
         return $this->hasOne(CatatanWaliKelas::class, 'data_siswa_id');
     }
+
+    public function nilaiMapel()
+    {
+        return $this->hasMany(NilaiMapelSiswa::class, 'data_siswa_id');
+    }
 }

@@ -27,27 +27,11 @@ class User extends Authenticatable
     ];
 
     /**
-     * ===============================
-     * ROLE LAMA (SATU ROLE)
-     * ===============================
+     * SATU USER = SATU ROLE
+     * (admin atau guru)
      */
     public function peran()
     {
         return $this->belongsTo(Peran::class, 'peran_id');
-    }
-
-    /**
-     * ===============================
-     * ROLE BARU (MULTI ROLE)
-     * ===============================
-     */
-    public function roles()
-    {
-        return $this->belongsToMany(
-            Peran::class,
-            'pengguna_peran',   // pivot table
-            'pengguna_id',
-            'peran_id'
-        );
     }
 }

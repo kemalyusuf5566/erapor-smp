@@ -20,4 +20,9 @@ class DataTahunPelajaran extends Model
         'status_aktif' => 'boolean',
         'tanggal_pembagian_rapor' => 'date',
     ];
+
+    public function nilaiMapel()
+    {
+        return $this->hasMany(NilaiMapelSiswa::class, 'data_tahun_pelajaran_id');
+    }
 }

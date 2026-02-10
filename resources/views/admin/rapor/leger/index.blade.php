@@ -1,0 +1,51 @@
+@extends('layouts.adminlte')
+
+@section('page_title','Leger Nilai')
+
+@section('content')
+
+<div class="card card-dark">
+  <div class="card-header">
+    <h3 class="card-title">Leger Nilai</h3>
+  </div>
+
+  <div class="card-body p-0">
+    <table class="table table-bordered table-striped mb-0">
+      <thead class="bg-secondary">
+        <tr>
+          <th width="50">No</th>
+          <th>Nama Kelas</th>
+          <th>Wali Kelas</th>
+          <th width="80" class="text-center">Tingkat</th>
+          <th width="120" class="text-center">Jumlah Siswa</th>
+          <th width="120" class="text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        @forelse($kelas as $i => $k)
+        <tr>
+          <td>{{ $i + 1 }}</td>
+          <td>{{ $k->nama_kelas }}</td>
+          <td>{{ $k->waliKelas->nama ?? '-' }}</td>
+          <td class="text-center">{{ $k->tingkat }}</td>
+          <td class="text-center">{{ $k->siswa_count }}</td>
+          <td class="text-center">
+            <a href="{{ route('admin.rapor.leger.detail', $k->id) }}"
+               class="btn btn-primary btn-xs">
+              <i class="fas fa-eye"></i> Detail
+            </a>
+          </td>
+        </tr>
+        @empty
+        <tr>
+          <td colspan="6" class="text-center text-muted">
+            Data kelas belum tersedia
+          </td>
+        </tr>
+        @endforelse
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@endsection

@@ -39,4 +39,8 @@ class DataKelas extends Model
             'data_kelas_id'
         );
     }
+    public function nilaiMapel()
+    {
+        return $this->hasMany(NilaiMapelSiswa::class, 'data_kelas_id');
+    }
 }

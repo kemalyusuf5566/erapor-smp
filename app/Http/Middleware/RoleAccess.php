@@ -9,59 +9,49 @@ use App\Models\DataKelas;
 use App\Models\DataEkstrakurikuler;
 use Illuminate\Support\Facades\Auth;
 
-class RoleMiddleware
+class RoleAccess
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next
-     * @param  string  $role
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @param  string  $access
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string $access): Response
     {
         $user = Auth::user();
 
         if (!$user) {
-            abort(401);
+            abort(403);
         }
 
-        $userRole = $user->peran->nama_peran ?? null;
-
         /**
-         * ===============================
-         * ADMIN
-         * ===============================
+         * ================= ADMIN =================
          */
-        if ($role === 'admin') {
-            if ($userRole !== 'admin') {
-                abort(403, 'Anda tidak memiliki akses admin');
+        if ($access === 'admin') {
+            if ($user->peran->nama_peran !== 'admin') {
+                abort(403, 'Akses hanya untuk admin');
             }
-
             return $next($request);
         }
 
         /**
-         * ===============================
-         * GURU (SEMUA GURU)
-         * ===============================
+         * ================= GURU UMUM =================
          */
-        if ($role === 'guru') {
-            if ($userRole !== 'guru') {
-                abort(403, 'Anda bukan guru');
+        if ($access === 'guru') {
+            if ($user->peran->nama_peran !== 'guru') {
+                abort(403, 'Akses hanya untuk guru');
             }
-
             return $next($request);
         }
 
         /**
-         * ===============================
-         * WALI KELAS (DINAMIS)
-         * ===============================
+         * ================= WALI KELAS =================
+         * muncul hanya jika user adalah wali_kelas di data_kelas
          */
-        if ($role === 'wali') {
-            if ($userRole !== 'guru') {
+        if ($access === 'wali_kelas') {
+            if ($user->peran->nama_peran !== 'guru') {
                 abort(403);
             }
 
@@ -75,12 +65,11 @@ class RoleMiddleware
         }
 
         /**
-         * ===============================
-         * PEMBINA EKSKUL (DINAMIS)
-         * ===============================
+         * ================= PEMBINA EKSKUL =================
+         * muncul hanya jika user jadi pembina di data_ekstrakurikuler
          */
-        if ($role === 'pembina') {
-            if ($userRole !== 'guru') {
+        if ($access === 'pembina_ekskul') {
+            if ($user->peran->nama_peran !== 'guru') {
                 abort(403);
             }
 

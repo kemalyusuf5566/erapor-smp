@@ -7,12 +7,11 @@
 
 @section('content')
 @php
-  $guru = $guru ?? null;
   $readonly = $mode === 'detail';
 @endphp
 
 <div class="card card-dark">
-  <div class="card-header bg-primary">
+  <div class="card-header">
     <h3 class="card-title">
       {{ $mode === 'create' ? 'Tambah Data Guru' :
          ($mode === 'edit' ? 'Edit Data Guru' : 'Detail Data Guru') }}
@@ -85,7 +84,7 @@
             <label>Jenis Kelamin</label>
             <select name="jenis_kelamin"
                     class="form-control"
-                    {{ $readonly ? 'readonly' : '' }}>
+                    {{ $readonly ? 'disabled' : '' }}>
               <option value="">-- Pilih --</option>
               <option value="L"
                 @selected(old('jenis_kelamin', $guru->jenis_kelamin ?? '') === 'L')>
@@ -139,14 +138,28 @@
                    required>
           </div>
 
+          {{-- PASSWORD --}}
           @if($mode === 'create')
-          <div class="form-group">
-            <label>Password Akun</label>
-            <input type="password"
-                   name="password"
-                   class="form-control"
-                   required>
-          </div>
+            <div class="form-group">
+              <label>Password Akun</label>
+              <input type="password"
+                     name="password"
+                     class="form-control"
+                     required>
+            </div>
+          @endif
+
+          @if($mode === 'edit')
+            <div class="form-group">
+              <label>Password Baru (opsional)</label>
+              <input type="password"
+                     name="password"
+                     class="form-control"
+                     placeholder="Kosongkan jika tidak diubah">
+              <small class="text-muted">
+                Isi hanya jika ingin mengganti password
+              </small>
+            </div>
           @endif
 
         </div>
@@ -160,6 +173,7 @@
           Simpan
         </button>
       @endif
+
       <a href="{{ route('admin.guru.index') }}" class="btn btn-secondary">
         Kembali
       </a>
