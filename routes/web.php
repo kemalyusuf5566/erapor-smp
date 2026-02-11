@@ -66,12 +66,18 @@ Route::middleware(['auth'])
         Route::resource('guru', DataGuruController::class);
         Route::resource('admin', DataAdminController::class);
 
-        // ADMINISTRASI
-        Route::resource('sekolah', DataSekolahController::class)
-            ->except(['show', 'destroy']);
+    // ADMINISTRASI
+    Route::resource('sekolah', DataSekolahController::class)
+        ->except(['show', 'destroy']);
 
-        // TAHUN PELAJARAN
-        Route::get('tahun-pelajaran', [DataTahunPelajaranController::class, 'index'])
+    Route::put(
+        'sekolah/{id}/logo',
+        [DataSekolahController::class, 'updateLogo']
+    )->name('sekolah.updateLogo');
+
+
+    // TAHUN PELAJARAN
+    Route::get('tahun-pelajaran', [DataTahunPelajaranController::class, 'index'])
             ->name('tahun.index');
         Route::post('tahun-pelajaran', [DataTahunPelajaranController::class, 'store'])
             ->name('tahun.store');

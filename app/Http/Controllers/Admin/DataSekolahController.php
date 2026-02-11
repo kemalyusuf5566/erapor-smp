@@ -11,15 +11,17 @@ class DataSekolahController extends Controller
 {
     public function index()
     {
-        // AMBIL SATU DATA SAJA
         $sekolah = DataSekolah::first();
 
-        return view('admin.sekolah.index', compact('sekolah'));
+        return view('admin.sekolah.index', [
+            'sekolah' => $sekolah,
+            'mode' => 'edit' // karena sekarang langsung edit di index
+        ]);
     }
 
     public function create()
     {
-        return view('admin.sekolah.form', [
+        return view('admin.sekolah.index', [
             'mode' => 'create',
             'sekolah' => null
         ]);
@@ -30,10 +32,13 @@ class DataSekolahController extends Controller
         $data = $request->validate([
             'nama_sekolah'       => 'required',
             'npsn'               => 'nullable',
-            'nss'                => 'nullable',
             'kode_pos'           => 'nullable',
             'telepon'            => 'nullable',
             'alamat'             => 'nullable',
+            'desa'               => 'nullable',
+            'kecamatan'          => 'nullable',
+            'kota'               => 'nullable',
+            'provinsi'           => 'nullable',
             'email'              => 'nullable|email',
             'website'            => 'nullable',
             'kepala_sekolah'     => 'nullable',
@@ -42,7 +47,8 @@ class DataSekolahController extends Controller
         ]);
 
         if ($request->hasFile('logo')) {
-            $data['logo'] = $request->file('logo')->store('logo-sekolah', 'public');
+            $path = $request->file('logo')->store('logo-sekolah', 'public');
+            $data['logo'] = $path;
         }
 
         DataSekolah::create($data);
@@ -56,7 +62,7 @@ class DataSekolahController extends Controller
     {
         $sekolah = DataSekolah::findOrFail($id);
 
-        return view('admin.sekolah.form', [
+        return view('admin.sekolah.index', [
             'mode' => 'edit',
             'sekolah' => $sekolah
         ]);
@@ -69,28 +75,51 @@ class DataSekolahController extends Controller
         $data = $request->validate([
             'nama_sekolah'       => 'required',
             'npsn'               => 'nullable',
-            'nss'                => 'nullable',
             'kode_pos'           => 'nullable',
             'telepon'            => 'nullable',
             'alamat'             => 'nullable',
+            'desa'               => 'nullable',
+            'kecamatan'          => 'nullable',
+            'kota'               => 'nullable',
+            'provinsi'           => 'nullable',
             'email'              => 'nullable|email',
             'website'            => 'nullable',
             'kepala_sekolah'     => 'nullable',
             'nip_kepala_sekolah' => 'nullable',
-            'logo'               => 'nullable|image|max:2048',
         ]);
-
-        if ($request->hasFile('logo')) {
-            if ($sekolah->logo) {
-                Storage::disk('public')->delete($sekolah->logo);
-            }
-            $data['logo'] = $request->file('logo')->store('logo-sekolah', 'public');
-        }
 
         $sekolah->update($data);
 
         return redirect()
             ->route('admin.sekolah.index')
             ->with('success', 'Data sekolah berhasil diperbarui');
+    }
+
+    public function updateLogo(Request $request, $id)
+    {
+        $sekolah = DataSekolah::findOrFail($id);
+
+        $request->validate([
+            'logo' => 'required|image|max:2048',
+        ]);
+
+        if ($request->hasFile('logo')) {
+
+            // hapus logo lama
+            if ($sekolah->logo) {
+                Storage::disk('public')->delete($sekolah->logo);
+            }
+
+            // simpan logo baru
+            $path = $request->file('logo')->store('logo-sekolah', 'public');
+
+            $sekolah->update([
+                'logo' => $path
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.sekolah.index')
+            ->with('success', 'Logo berhasil diperbarui');
     }
 }

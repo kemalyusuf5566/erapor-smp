@@ -80,7 +80,7 @@
 </div>
 
 <div class="row mt-2">
-  <div class="col-md-4">
+  <div class="col-md-6">
     <label>Jenis Kelamin *</label>
     <select name="jenis_kelamin" class="form-control" {{ $mode==='detail'?'disabled':'' }}>
       <option value="L" {{ $siswa->jenis_kelamin=='L'?'selected':'' }}>Laki-laki</option>
@@ -88,7 +88,7 @@
     </select>
   </div>
 
-  <div class="col-md-4">
+  <div class="col-md-6">
     <label>Agama *</label>
     <select name="agama" class="form-control" {{ $mode==='detail'?'disabled':'' }}>
       @php
@@ -101,7 +101,7 @@
     </select>
   </div>
 
-  <div class="col-md-4">
+  <div class="col-md-6">
     <label>Status Dalam Keluarga</label>
     <select name="status_dalam_keluarga" class="form-control" {{ $mode==='detail'?'disabled':'' }}>
       <option value="">-- Pilih --</option>
@@ -110,18 +110,24 @@
       <option value="Anak Tiri" {{ $siswa->status_dalam_keluarga=='Anak Tiri'?'selected':'' }}>Anak Tiri</option>
     </select>
   </div>
+  <div class="col-md-6">
+    <label>Anak Ke *</label>
+    <input type="text" name="anak_ke" class="form-control"
+           value="{{ old('anak_ke',$siswa->anak_ke) }}"
+           {{ $mode==='detail'?'readonly':'' }}>
+  </div>
 </div>
 
 <div class="row mt-2">
   <div class="col-md-6">
     <label>Alamat Siswa</label>
-    <textarea name="alamat_siswa" class="form-control"
-      {{ $mode==='detail'?'readonly':'' }}>{{ $siswa->alamat_siswa }}</textarea>
+    <textarea name="alamat" class="form-control"
+      {{ $mode==='detail'?'readonly':'' }}>{{ $siswa->alamat }}</textarea>
   </div>
   <div class="col-md-6">
     <label>Telepon Siswa</label>
-    <input type="text" name="telepon_siswa" class="form-control"
-           value="{{ $siswa->telepon_siswa }}"
+    <input type="text" name="telepon" class="form-control"
+           value="{{ $siswa->telepon }}"
            {{ $mode==='detail'?'readonly':'' }}>
   </div>
 </div>
@@ -140,8 +146,8 @@
   </div>
   <div class="col-md-3">
     <label>Diterima di Kelas</label>
-    <input type="text" name="diterima_kelas" class="form-control"
-           value="{{ $siswa->diterima_kelas }}"
+    <input type="text" name="diterima_di_kelas" class="form-control"
+           value="{{ $siswa->diterima_di_kelas }}"
            {{ $mode==='detail'?'readonly':'' }}>
   </div>
   <div class="col-md-3">

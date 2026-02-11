@@ -11,9 +11,18 @@ class DataSekolah extends Model
     protected $fillable = [
         'nama_sekolah',
         'npsn',
+        'kode_pos',
+        'telepon',
         'alamat',
+        'desa',
+        'kecamatan',
+        'kota',
+        'provinsi',
+        'email',
+        'website',
         'kepala_sekolah',
         'nip_kepala_sekolah',
+        'logo',
     ];
 
     public function kelas()
