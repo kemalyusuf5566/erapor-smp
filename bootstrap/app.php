@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         */
 
         $middleware->alias([
+            'role'         => \App\Http\Middleware\RoleMiddleware::class,
             'roleaccess'   => \App\Http\Middleware\RoleAccess::class,
             'guru.context' => \App\Http\Middleware\GuruContext::class,
         ]);

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Peran;
 
 class User extends Authenticatable
 {
@@ -15,7 +16,6 @@ class User extends Authenticatable
         'peran_id',
         'nama',
         'email',
-        'username',
         'password',
         'foto',
         'status_aktif',
@@ -26,12 +26,31 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /**
-     * SATU USER = SATU ROLE
-     * (admin atau guru)
-     */
     public function peran()
     {
         return $this->belongsTo(Peran::class, 'peran_id');
+    }
+
+    public function rolesTambahan()
+    {
+        return $this->belongsToMany(
+            Peran::class,
+            'pengguna_peran',
+            'pengguna_id',
+            'peran_id'
+        );
+    }
+
+    public function hasRole($roleName)
+    {
+        // cek role utama
+        if ($this->peran && $this->peran->nama_peran === $roleName) {
+            return true;
+        }
+
+        // cek role tambahan
+        return $this->rolesTambahan()
+            ->where('nama_peran', $roleName)
+            ->exists();
     }
 }

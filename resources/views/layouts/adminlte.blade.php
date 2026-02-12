@@ -212,6 +212,103 @@
 
           @endif
           {{-- =============== END ADMIN =============== --}}
+          {{-- ================= GURU ================= --}}
+          @if($role === 'guru_mapel')
+
+          {{-- DASHBOARD GURU --}}
+          <li class="nav-item">
+            <a href="{{ route('guru.dashboard') }}" class="nav-link">
+              <i class="nav-icon fas fa-home"></i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+
+          {{-- GURU MAPEL (WAJIB) --}}
+          <li class="nav-item">
+            <a href="{{ route('guru.pembelajaran.index') }}" class="nav-link">
+              <i class="nav-icon fas fa-book"></i>
+              <p>Guru Mapel</p>
+            </a>
+          </li>
+
+          {{-- KOKURIKULER (KONDISIONAL: koordinator_p5) --}}
+          @if($user && $user->hasRole('koordinator_p5'))
+          <li class="nav-item">
+            <a href="{{ route('guru.kokurikuler.index') }}" class="nav-link">
+              <i class="nav-icon fas fa-layer-group"></i>
+              <p>Kokurikuler</p>
+            </a>
+          </li>
+          @endif
+
+          {{-- PEMBINA EKSKUL (KONDISIONAL: pembina_ekskul) --}}
+          @if($user && $user->hasRole('pembina_ekskul'))
+          <li class="nav-item">
+            <a href="{{ route('guru.ekskul.index') }}" class="nav-link">
+              <i class="nav-icon fas fa-futbol"></i>
+              <p>Pembina Ekskul</p>
+            </a>
+          </li>
+          @endif
+
+          {{-- WALI KELAS (KONDISIONAL: role tambahan atau memang tercatat jadi wali di data_kelas) --}}
+          @php
+            $isWali = $user ? \App\Models\DataKelas::where('wali_kelas_id', $user->id)->exists() : false;
+          @endphp
+
+          @if($user && ($user->hasRole('wali_kelas') || $isWali))
+          <li class="nav-item has-treeview">
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-user-tie"></i>
+              <p>
+                Wali Kelas
+                <i class="right fas fa-angle-left"></i>
+              </p>
+            </a>
+
+            <ul class="nav nav-treeview">
+
+              <li class="nav-item">
+                <a href="{{ route('guru.wali-kelas.data-kelas.index') }}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Data Kelas</p>
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a href="{{ route('guru.wali-kelas.ketidakhadiran.index') }}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Ketidakhadiran</p>
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a href="{{ route('guru.wali-kelas.catatan.index') }}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Catatan Wali Kelas</p>
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a href="{{ route('guru.wali-kelas.rapor.leger.index') }}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Leger Nilai</p>
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a href="{{ route('guru.wali-kelas.rapor.cetak.index') }}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Cetak Rapor</p>
+                </a>
+              </li>
+
+            </ul>
+          </li>
+          @endif
+
+          @endif
+          {{-- =============== END GURU =============== --}}
 
         </ul>
       </nav>

@@ -33,8 +33,8 @@ class DataPembelajaran extends Model
     }
 
     // 🔗 ke nilai
-    public function nilai()
-    {
-        return $this->hasMany(LegerNilai::class, 'data_pembelajaran_id');
-    }
+    // public function nilai()
+    // {
+    //     return $this->hasMany(LegerNilai::class, 'data_pembelajaran_id');
+    // }
 }

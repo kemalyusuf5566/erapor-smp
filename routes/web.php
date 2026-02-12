@@ -36,6 +36,10 @@ use App\Http\Controllers\Admin\RaporSemesterPdfController;
 */
 use App\Http\Controllers\Guru\PembelajaranController;
 use App\Http\Controllers\Guru\NilaiController;
+use App\Http\Controllers\Guru\TujuanPembelajaranController;
+use App\Http\Controllers\Guru\NilaiAkhirController;
+use App\Http\Controllers\Guru\DeskripsiCapaianController;
+use App\Http\Controllers\Guru\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,8 +55,9 @@ Route::get('/', function () {
 |--------------------------------------------------------------------------
 | ADMIN AREA
 |--------------------------------------------------------------------------
+| Wajib: hanya admin yang boleh masuk /admin/*
 */
-Route::middleware(['auth'])
+Route::middleware(['auth', 'role:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -66,18 +71,17 @@ Route::middleware(['auth'])
         Route::resource('guru', DataGuruController::class);
         Route::resource('admin', DataAdminController::class);
 
-    // ADMINISTRASI
-    Route::resource('sekolah', DataSekolahController::class)
-        ->except(['show', 'destroy']);
+        // ADMINISTRASI
+        Route::resource('sekolah', DataSekolahController::class)
+            ->except(['show', 'destroy']);
 
-    Route::put(
-        'sekolah/{id}/logo',
-        [DataSekolahController::class, 'updateLogo']
-    )->name('sekolah.updateLogo');
+        Route::put(
+            'sekolah/{id}/logo',
+            [DataSekolahController::class, 'updateLogo']
+        )->name('sekolah.updateLogo');
 
-
-    // TAHUN PELAJARAN
-    Route::get('tahun-pelajaran', [DataTahunPelajaranController::class, 'index'])
+        // TAHUN PELAJARAN
+        Route::get('tahun-pelajaran', [DataTahunPelajaranController::class, 'index'])
             ->name('tahun.index');
         Route::post('tahun-pelajaran', [DataTahunPelajaranController::class, 'store'])
             ->name('tahun.store');
@@ -93,9 +97,9 @@ Route::middleware(['auth'])
         Route::resource('ekstrakurikuler', DataEkstrakurikulerController::class);
 
         /*
-        |--------------------------------------------------------------------------
+        |----------------------------------------------------------------------
         | KOKURIKULER
-        |--------------------------------------------------------------------------
+        |----------------------------------------------------------------------
         */
         Route::prefix('kokurikuler')
             ->name('kokurikuler.')
@@ -106,9 +110,9 @@ Route::middleware(['auth'])
             });
 
         /*
-        |--------------------------------------------------------------------------
+        |----------------------------------------------------------------------
         | RAPOR
-        |--------------------------------------------------------------------------
+        |----------------------------------------------------------------------
         */
         Route::prefix('rapor')
             ->name('rapor.')
@@ -139,24 +143,47 @@ Route::middleware(['auth'])
 |--------------------------------------------------------------------------
 | GURU AREA
 |--------------------------------------------------------------------------
+| Minimal: hanya guru_mapel yang boleh masuk /guru/*
+| (nanti bisa diperluas untuk multi-role wali_kelas/koordinator_p5/pembina_ekskul)
 */
-Route::middleware(['auth'])
+Route::middleware(['auth', 'role:guru_mapel'])
     ->prefix('guru')
     ->name('guru.')
     ->group(function () {
 
-        Route::get('dashboard', function () {
-            return view('guru.dashboard');
-        })->name('dashboard');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('pembelajaran', [PembelajaranController::class, 'index'])
-            ->name('pembelajaran');
+            ->name('pembelajaran.index');
 
         Route::get('nilai/{pembelajaran}', [NilaiController::class, 'index'])
-            ->name('nilai');
+            ->name('nilai.index');
 
         Route::post('nilai', [NilaiController::class, 'store'])
             ->name('nilai.store');
+        Route::get('tujuan-pembelajaran/{pembelajaran}', [TujuanPembelajaranController::class, 'index'])
+            ->name('tp.index');
+
+        Route::post('tujuan-pembelajaran/{pembelajaran}', [TujuanPembelajaranController::class, 'store'])
+            ->name('tp.store');
+
+        Route::delete('tujuan-pembelajaran/hapus/{id}', [TujuanPembelajaranController::class, 'destroy'])
+            ->name('tp.destroy');
+
+        Route::get('nilai-akhir/{pembelajaran}', [NilaiAkhirController::class, 'index'])
+            ->name('nilai_akhir.index');
+
+        Route::post('nilai-akhir/{pembelajaran}', [NilaiAkhirController::class, 'update'])
+            ->name('nilai_akhir.update');
+
+        Route::post('nilai-akhir/{pembelajaran}/apply-average', [NilaiAkhirController::class, 'applyAverage'])
+            ->name('nilai_akhir.applyAverage');
+
+        Route::get('deskripsi-capaian/{pembelajaran}', [DeskripsiCapaianController::class, 'index'])
+            ->name('deskripsi.index');
+
+        Route::post('deskripsi-capaian/{pembelajaran}', [DeskripsiCapaianController::class, 'update'])
+            ->name('deskripsi.update');
     });
 
 /*
