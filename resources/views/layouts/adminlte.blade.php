@@ -212,8 +212,8 @@
 
           @endif
           {{-- =============== END ADMIN =============== --}}
-          {{-- ================= GURU ================= --}}
-          @if($role === 'guru_mapel')
+         {{-- ================= GURU ================= --}}
+        @if($role === 'guru_mapel')
 
           {{-- DASHBOARD GURU --}}
           <li class="nav-item">
@@ -232,83 +232,97 @@
           </li>
 
           {{-- KOKURIKULER (KONDISIONAL: koordinator_p5) --}}
-          @if($user && $user->hasRole('koordinator_p5'))
-          <li class="nav-item">
-            <a href="{{ route('guru.kokurikuler.index') }}" class="nav-link">
-              <i class="nav-icon fas fa-layer-group"></i>
-              <p>Kokurikuler</p>
-            </a>
-          </li>
+          @if($user && $user->hasRole('koordinator_p5') && \Illuminate\Support\Facades\Route::has('guru.kokurikuler.index'))
+            <li class="nav-item">
+              <a href="{{ route('guru.kokurikuler.index') }}" class="nav-link">
+                <i class="nav-icon fas fa-layer-group"></i>
+                <p>Kokurikuler</p>
+              </a>
+            </li>
           @endif
 
           {{-- PEMBINA EKSKUL (KONDISIONAL: pembina_ekskul) --}}
-          @if($user && $user->hasRole('pembina_ekskul'))
-          <li class="nav-item">
-            <a href="{{ route('guru.ekskul.index') }}" class="nav-link">
-              <i class="nav-icon fas fa-futbol"></i>
-              <p>Pembina Ekskul</p>
-            </a>
-          </li>
+          @if($user && $user->hasRole('pembina_ekskul') && \Illuminate\Support\Facades\Route::has('guru.ekskul.index'))
+            <li class="nav-item">
+              <a href="{{ route('guru.ekskul.index') }}" class="nav-link">
+                <i class="nav-icon fas fa-futbol"></i>
+                <p>Pembina Ekskul</p>
+              </a>
+            </li>
           @endif
 
-          {{-- WALI KELAS (KONDISIONAL: role tambahan atau memang tercatat jadi wali di data_kelas) --}}
+          {{-- WALI KELAS (KONDISIONAL) --}}
           @php
             $isWali = $user ? \App\Models\DataKelas::where('wali_kelas_id', $user->id)->exists() : false;
           @endphp
 
-          @if($user && ($user->hasRole('wali_kelas') || $isWali))
-          <li class="nav-item has-treeview">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-user-tie"></i>
-              <p>
-                Wali Kelas
-                <i class="right fas fa-angle-left"></i>
-              </p>
-            </a>
+          @if(
+            $user
+            && ($user->hasRole('wali_kelas') || $isWali)
+            && \Illuminate\Support\Facades\Route::has('guru.wali-kelas.data-kelas.index')
+          )
+            <li class="nav-item has-treeview">
+              <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-user-tie"></i>
+                <p>
+                  Wali Kelas
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
 
-            <ul class="nav nav-treeview">
+              <ul class="nav nav-treeview">
 
-              <li class="nav-item">
-                <a href="{{ route('guru.wali-kelas.data-kelas.index') }}" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Data Kelas</p>
-                </a>
-              </li>
+                <li class="nav-item">
+                  <a href="{{ route('guru.wali-kelas.data-kelas.index') }}" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Data Kelas</p>
+                  </a>
+                </li>
 
-              <li class="nav-item">
-                <a href="{{ route('guru.wali-kelas.ketidakhadiran.index') }}" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Ketidakhadiran</p>
-                </a>
-              </li>
+                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.ketidakhadiran.index'))
+                <li class="nav-item">
+                  <a href="{{ route('guru.wali-kelas.ketidakhadiran.index') }}" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Ketidakhadiran</p>
+                  </a>
+                </li>
+                @endif
 
-              <li class="nav-item">
-                <a href="{{ route('guru.wali-kelas.catatan.index') }}" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Catatan Wali Kelas</p>
-                </a>
-              </li>
+                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.catatan.index'))
+                <li class="nav-item">
+                  <a href="{{ route('guru.wali-kelas.catatan.index') }}" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Catatan Wali Kelas</p>
+                  </a>
+                </li>
+                @endif
 
-              <li class="nav-item">
-                <a href="{{ route('guru.wali-kelas.rapor.leger.index') }}" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Leger Nilai</p>
-                </a>
-              </li>
+                {{-- Rapor Wali Kelas (baru tampil kalau routenya sudah ada) --}}
+                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.rapor.leger.index'))
+                <li class="nav-item">
+                  <a href="{{ route('guru.wali-kelas.rapor.leger.index') }}" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Leger Nilai</p>
+                  </a>
+                </li>
+                @endif
 
-              <li class="nav-item">
-                <a href="{{ route('guru.wali-kelas.rapor.cetak.index') }}" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Cetak Rapor</p>
-                </a>
-              </li>
+                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.rapor.cetak.index'))
+                <li class="nav-item">
+                  <a href="{{ route('guru.wali-kelas.rapor.cetak.index') }}" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Cetak Rapor</p>
+                  </a>
+                </li>
+                @endif
 
-            </ul>
-          </li>
+              </ul>
+            </li>
           @endif
 
-          @endif
-          {{-- =============== END GURU =============== --}}
+        @endif
+        {{-- =============== END GURU =============== --}}
+
 
         </ul>
       </nav>

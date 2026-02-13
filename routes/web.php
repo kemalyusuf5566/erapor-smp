@@ -40,6 +40,13 @@ use App\Http\Controllers\Guru\TujuanPembelajaranController;
 use App\Http\Controllers\Guru\NilaiAkhirController;
 use App\Http\Controllers\Guru\DeskripsiCapaianController;
 use App\Http\Controllers\Guru\DashboardController;
+use App\Http\Controllers\Guru\Kokurikuler\KelompokController;
+use App\Http\Controllers\Guru\Kokurikuler\AnggotaKelompokController;
+use App\Http\Controllers\Guru\Kokurikuler\CapaianAkhirController;
+use App\Http\Controllers\Guru\Kokurikuler\DeskripsiKokurikulerController;
+use App\Http\Controllers\Guru\WaliKelas\DataKelasController as GuruWaliDataKelasController;
+use App\Http\Controllers\Guru\WaliKelas\KetidakhadiranController;
+use App\Http\Controllers\Guru\WaliKelas\CatatanWaliKelasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -184,7 +191,71 @@ Route::middleware(['auth', 'role:guru_mapel'])
 
         Route::post('deskripsi-capaian/{pembelajaran}', [DeskripsiCapaianController::class, 'update'])
             ->name('deskripsi.update');
-    });
+
+        Route::prefix('kokurikuler')->name('kokurikuler.')->group(function () {
+
+            Route::get('{kelompok}/anggota', [AnggotaKelompokController::class, 'index'])->name('anggota.index');
+            Route::post('{kelompok}/anggota', [AnggotaKelompokController::class, 'store'])->name('anggota.store');
+            Route::delete('{kelompok}/anggota/{anggota}', [AnggotaKelompokController::class, 'destroy'])->name('anggota.destroy');
+        });
+
+        Route::get('{kelompok}/kegiatan/{pivot}/capaian-akhir', [CapaianAkhirController::class, 'index'])
+            ->name('capaian_akhir.index');
+
+        Route::post('{kelompok}/kegiatan/{pivot}/capaian-akhir', [CapaianAkhirController::class, 'store'])
+            ->name('capaian_akhir.store');
+
+        Route::put('{kelompok}/kegiatan/{pivot}/capaian-akhir/{id}', [CapaianAkhirController::class, 'update'])
+            ->name('capaian_akhir.update');
+
+        Route::delete('{kelompok}/kegiatan/{pivot}/capaian-akhir/{id}', [CapaianAkhirController::class, 'destroy'])
+            ->name('capaian_akhir.destroy');
+
+        Route::prefix('kokurikuler')->name('kokurikuler.')->group(function () {
+
+            // ... route lain (kelompok, anggota, kegiatan, capaian, nilai)
+
+            Route::get('kelompok/{kelompok}/kegiatan/{kegiatan}/deskripsi', [DeskripsiKokurikulerController::class, 'index'])
+                ->name('deskripsi.index');
+
+            Route::post('kelompok/{kelompok}/kegiatan/{kegiatan}/deskripsi', [DeskripsiKokurikulerController::class, 'update'])
+                ->name('deskripsi.update');
+        });
+
+        Route::prefix('ekskul')->name('ekskul.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Guru\EkskulController::class, 'index'])
+                ->name('index');
+
+            Route::get('{ekskul}/anggota', [\App\Http\Controllers\Guru\EkskulAnggotaController::class, 'index'])
+                ->name('anggota.index');
+
+            Route::post('{ekskul}/anggota', [\App\Http\Controllers\Guru\EkskulAnggotaController::class, 'store'])
+                ->name('anggota.store');
+
+            Route::post('{ekskul}/anggota/update', [\App\Http\Controllers\Guru\EkskulAnggotaController::class, 'update'])
+                ->name('anggota.update');
+
+            Route::delete('{ekskul}/anggota/{anggota}', [\App\Http\Controllers\Guru\EkskulAnggotaController::class, 'destroy'])
+                ->name('anggota.destroy');
+        });
+
+        Route::prefix('wali-kelas')->name('wali-kelas.')->group(function () {
+
+        // DATA KELAS
+        Route::get('data-kelas', [GuruWaliDataKelasController::class, 'index'])->name('data-kelas.index');
+        Route::get('data-kelas/{kelas}', [GuruWaliDataKelasController::class, 'detail'])->name('data-kelas.detail');
+
+            // KETIDAKHADIRAN
+            Route::get('ketidakhadiran', [KetidakhadiranController::class, 'index'])->name('ketidakhadiran.index');
+            Route::get('ketidakhadiran/{kelas}', [KetidakhadiranController::class, 'kelola'])->name('ketidakhadiran.kelola');
+            Route::post('ketidakhadiran/{kelas}', [KetidakhadiranController::class, 'update'])->name('ketidakhadiran.update');
+
+            // CATATAN
+            Route::get('catatan', [CatatanWaliKelasController::class, 'index'])->name('catatan.index');
+            Route::get('catatan/{kelas}', [CatatanWaliKelasController::class, 'kelola'])->name('catatan.kelola');
+            Route::post('catatan/{kelas}', [CatatanWaliKelasController::class, 'update'])->name('catatan.update');
+        });
+});
 
 /*
 |--------------------------------------------------------------------------

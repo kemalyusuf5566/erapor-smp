@@ -43,4 +43,9 @@ class KkKelompok extends Model
     {
         return $this->hasMany(KkNilai::class, 'kk_kelompok_id');
     }
+    
+    public function kelompokKegiatan()
+    {
+        return $this->hasMany(KkKelompokKegiatan::class, 'kk_kelompok_id');
+    }
 }

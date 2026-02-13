@@ -12,8 +12,9 @@ class KkNilai extends Model
         'kk_kelompok_id',
         'kk_kegiatan_id',
         'data_siswa_id',
-        'capaian',
+        'kk_capaian_akhir_id', // baru
         'predikat',
+        'deskripsi',           // baru
     ];
 
     public function siswa()
@@ -29,5 +30,9 @@ class KkNilai extends Model
     public function kelompok()
     {
         return $this->belongsTo(KkKelompok::class, 'kk_kelompok_id');
+    }
+    public function capaianAkhir()
+    {
+        return $this->belongsTo(KkCapaianAkhir::class, 'kk_capaian_akhir_id');
     }
 }

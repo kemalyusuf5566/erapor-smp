@@ -18,4 +18,9 @@ class DataEkstrakurikuler extends Model
     {
         return $this->belongsTo(DataGuru::class, 'pembina_id');
     }
+
+    public function anggota()
+    {
+        return $this->hasMany(EkskulAnggota::class, 'data_ekstrakurikuler_id');
+    }
 }
