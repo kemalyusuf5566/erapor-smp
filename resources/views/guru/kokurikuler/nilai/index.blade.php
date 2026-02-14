@@ -1,94 +1,98 @@
 @extends('layouts.adminlte')
 
-@section('page_title', 'Input Nilai Kokurikuler')
+@section('title', 'Input Nilai Kokurikuler')
 
 @section('content')
-<div class="card">
-  <div class="card-body">
+<div class="container-fluid">
 
-    <div class="mb-3">
-      <div><b>Kelompok:</b> {{ $kelompok->nama_kelompok }}</div>
-      <div><b>Kelas:</b> {{ $kelompok->kelas?->nama_kelas }}</div>
-      <div><b>Koordinator:</b> {{ $kelompok->koordinator?->nama }}</div>
-      <div><b>Kegiatan:</b> {{ $kelompokKegiatan->kegiatan?->nama_kegiatan }}</div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">Input Nilai Kokurikuler</h4>
+      <small class="text-muted">
+        <b>Kelompok:</b> {{ $kelompok->nama_kelompok ?? '-' }} |
+        <b>Kelas:</b> {{ $kelompok->kelas->nama_kelas ?? '-' }} |
+        <b>Kegiatan:</b> {{ $kegiatan->nama_kegiatan ?? '-' }}
+      </small>
     </div>
 
-    @if(session('success'))
-      <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
+    <a href="{{ route('guru.kokurikuler.kegiatan.index', $kelompok->id) }}" class="btn btn-secondary btn-sm">
+      Kembali
+    </a>
+  </div>
 
-    {{-- Dropdown capaian profil --}}
-    <form method="GET" action="{{ route('guru.kokurikuler.nilai.index', [$kelompok->id, $kelompokKegiatan->id]) }}" class="mb-3">
-      <div class="form-row">
-        <div class="col-md-8">
-          <select name="capaian" class="form-control" onchange="this.form.submit()">
-            <option value="">-- pilih capaian profil (capaian akhir) --</option>
-            @foreach($capaianList as $c)
-              <option value="{{ $c->id }}" @selected((string)$selectedCapaianId === (string)$c->id)>
-                {{ $c->dimensi?->nama_dimensi }} - {{ $c->capaian }}
-              </option>
-            @endforeach
-          </select>
-        </div>
+  @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
 
-        <div class="col-md-4 text-right">
-          {{-- tombol deskripsi (langkah 5, nanti dibuat) --}}
-          <a href="#" class="btn btn-warning disabled">Deskripsi Capaian Kokurikuler</a>
-        </div>
-      </div>
-    </form>
+  <div class="card">
+    <div class="card-body">
 
-    @if(!$selectedCapaianId)
-      <div class="alert alert-info">
-        Silakan pilih <b>capaian profil</b> terlebih dahulu untuk menampilkan input nilai.
-      </div>
-    @else
-
-      <form method="POST" action="{{ route('guru.kokurikuler.nilai.store', [$kelompok->id, $kelompokKegiatan->id]) }}">
+      <form method="POST" action="{{ route('guru.kokurikuler.nilai.update', [$kelompok->id, $kegiatan->id]) }}">
         @csrf
-        <input type="hidden" name="kk_capaian_akhir_id" value="{{ $selectedCapaianId }}">
 
-        <table class="table table-bordered">
-          <thead>
-            <tr>
-              <th width="60">No</th>
-              <th width="180">NIS</th>
-              <th>Nama</th>
-              <th width="120">L/P</th>
-              <th width="220">Predikat</th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach($siswa as $i => $s)
-              @php
-                $existing = $nilaiBySiswa->get($s->id);
-              @endphp
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm">
+            <thead>
               <tr>
-                <td>{{ $i+1 }}</td>
-                <td>{{ $s->nis }}</td>
-                <td>{{ $s->nama_siswa }}</td>
-                <td>{{ $s->jenis_kelamin }}</td>
-                <td>
-                  <select name="predikat[{{ $s->id }}]" class="form-control">
-                    <option value="">-- pilih --</option>
-                    @foreach($predikatOptions as $opt)
-                      <option value="{{ $opt }}" @selected(($existing?->predikat ?? '') === $opt)>
-                        {{ $opt }}
-                      </option>
-                    @endforeach
-                  </select>
-                </td>
+                <th style="width:70px;">No</th>
+                <th>Nama Siswa</th>
+                <th style="width:360px;">Capaian Akhir (Dropdown)</th>
+                <th style="width:200px;">Predikat</th>
               </tr>
-            @endforeach
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @forelse($anggota as $i => $a)
+                @php
+                  $siswa = $a->siswa;
+                  $nilai = $nilaiRows[$siswa->id] ?? null;
+                @endphp
 
-        <button class="btn btn-primary">Simpan</button>
-        <a href="{{ route('guru.kokurikuler.kegiatan.index', $kelompok->id) }}" class="btn btn-secondary">Kembali</a>
+                <tr>
+                  <td>{{ $i+1 }}</td>
+                  <td>{{ $siswa->nama_siswa ?? '-' }}</td>
+
+                  <td>
+                    <select name="nilai[{{ $siswa->id }}][kk_capaian_akhir_id]" class="form-control form-control-sm">
+                      <option value="">- pilih capaian akhir -</option>
+
+                      @foreach($capaianAkhir as $ca)
+                        <option value="{{ $ca->id }}"
+                          {{ (string)($nilai->kk_capaian_akhir_id ?? '') === (string)$ca->id ? 'selected' : '' }}>
+                          {{ $ca->dimensi->nama_dimensi ?? 'Dimensi' }} — {{ $ca->capaian }}
+                        </option>
+                      @endforeach
+                    </select>
+                  </td>
+
+                  <td>
+                    <select name="nilai[{{ $siswa->id }}][predikat]" class="form-control form-control-sm">
+                      <option value="">- pilih predikat -</option>
+                      @foreach($opsiPredikat as $val => $label)
+                        <option value="{{ $val }}"
+                          {{ (string)($nilai->predikat ?? '') === (string)$val ? 'selected' : '' }}>
+                          {{ $label }}
+                        </option>
+                      @endforeach
+                    </select>
+                  </td>
+                </tr>
+              @empty
+                <tr>
+                  <td colspan="4" class="text-center">Belum ada anggota di kelompok ini.</td>
+                </tr>
+              @endforelse
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-3 text-right">
+          <button class="btn btn-primary btn-sm">Simpan Nilai</button>
+        </div>
+
       </form>
 
-    @endif
-
+    </div>
   </div>
+
 </div>
 @endsection

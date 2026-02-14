@@ -31,7 +31,7 @@ class KkNilai extends Model
     {
         return $this->belongsTo(KkKelompok::class, 'kk_kelompok_id');
     }
-    public function capaianAkhir()
+    public function kkCapaianAkhir()
     {
         return $this->belongsTo(KkCapaianAkhir::class, 'kk_capaian_akhir_id');
     }

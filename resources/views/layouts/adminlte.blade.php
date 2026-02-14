@@ -45,6 +45,20 @@
       @php
         $user = auth()->user();
         $role = $user?->peran?->nama_peran;
+
+        // ====== ROLE DINAMIS (SAMAKAN POLA WALI KELAS) ======
+
+    $isWali = $user
+        ? \App\Models\DataKelas::where('wali_kelas_id', $user->id)->exists()
+        : false;
+
+    $isKoordinator = $user
+        ? \App\Models\KkKelompok::where('koordinator_id', $user->id)->exists()
+        : false;
+
+    $isPembina = $user
+        ? \App\Models\DataEkstrakurikuler::where('pembina_id', $user->id)->exists()
+        : false;
       @endphp
 
       <nav class="mt-2">
@@ -231,24 +245,39 @@
             </a>
           </li>
 
-          {{-- KOKURIKULER (KONDISIONAL: koordinator_p5) --}}
-          @if($user && $user->hasRole('koordinator_p5') && \Illuminate\Support\Facades\Route::has('guru.kokurikuler.index'))
-            <li class="nav-item">
-              <a href="{{ route('guru.kokurikuler.index') }}" class="nav-link">
-                <i class="nav-icon fas fa-layer-group"></i>
-                <p>Kokurikuler</p>
-              </a>
-            </li>
+          {{-- KOKURIKULER --}}
+          @if($isKoordinator)
+            @php
+              // fallback: cari route kokurikuler yang BENAR-BENAR ada
+              $kokuriRoute = null;
+
+              if (\Illuminate\Support\Facades\Route::has('guru.kokurikuler.index')) {
+                  $kokuriRoute = route('guru.kokurikuler.index');
+              } elseif (\Illuminate\Support\Facades\Route::has('guru.kokurikuler.anggota.index')) {
+                  // ini route yang kamu PASTI punya dari route:list
+                  // tapi butuh parameter {kelompok}, jadi tidak bisa dipakai untuk link menu utama
+                  $kokuriRoute = null;
+              }
+            @endphp
+
+            @if($kokuriRoute)
+              <li class="nav-item">
+                <a href="{{ $kokuriRoute }}" class="nav-link">
+                  <i class="nav-icon fas fa-layer-group"></i>
+                  <p>Kokurikuler</p>
+                </a>
+              </li>
+            @endif
           @endif
 
-          {{-- PEMBINA EKSKUL (KONDISIONAL: pembina_ekskul) --}}
-          @if($user && $user->hasRole('pembina_ekskul') && \Illuminate\Support\Facades\Route::has('guru.ekskul.index'))
-            <li class="nav-item">
-              <a href="{{ route('guru.ekskul.index') }}" class="nav-link">
-                <i class="nav-icon fas fa-futbol"></i>
-                <p>Pembina Ekskul</p>
-              </a>
-            </li>
+          {{-- PEMBINA EKSKUL --}}
+          @if($isPembina)
+          <li class="nav-item">
+            <a href="{{ route('guru.ekskul.index') }}" class="nav-link">
+              <i class="nav-icon fas fa-futbol"></i>
+              <p>Pembina Ekskul</p>
+            </a>
+          </li>
           @endif
 
           {{-- WALI KELAS (KONDISIONAL) --}}

@@ -11,33 +11,45 @@ use Illuminate\Support\Facades\Auth;
 
 class KegiatanKelompokController extends Controller
 {
+    /**
+     * Pastikan yang akses adalah koordinator kelompok tsb.
+     */
     private function assertKoordinator(KkKelompok $kelompok): void
     {
-        abort_unless($kelompok->koordinator_id === Auth::id(), 403, 'Bukan koordinator kelompok ini');
+        $user = Auth::user();
+
+        if (!$user || (int) $kelompok->koordinator_id !== (int) $user->id) {
+            abort(403, 'Anda bukan koordinator kelompok ini');
+        }
     }
 
+    /**
+     * HALAMAN: Kelola Kegiatan & Input Nilai
+     * URL: /guru/kokurikuler/{kelompok}/kegiatan
+     */
     public function index(KkKelompok $kelompok)
     {
         $this->assertKoordinator($kelompok);
 
-        // list kegiatan yang sudah dipilih kelompok (pivot)
-        $kegiatanPilihan = KkKelompokKegiatan::with('kegiatan')
+        // untuk header info
+        $kelompok->load(['kelas', 'koordinator']);
+
+        // LIST kegiatan yang sudah dipilih kelompok (pivot)
+        $items = KkKelompokKegiatan::with('kegiatan')
             ->where('kk_kelompok_id', $kelompok->id)
-            ->orderBy('id', 'desc')
+            ->orderByDesc('id')
             ->get();
 
-        // kandidat kegiatan yang belum dipilih
-        $sudahDipilih = $kegiatanPilihan->pluck('kk_kegiatan_id')->toArray();
+        // LIST master kegiatan (untuk dropdown tambah)
+        $kegiatanList = KkKegiatan::orderByDesc('id')->get();
 
-        $kandidat = KkKegiatan::query()
-            ->when(count($sudahDipilih) > 0, fn($q) => $q->whereNotIn('id', $sudahDipilih))
-            ->orderBy('tema')
-            ->orderBy('nama_kegiatan')
-            ->get();
-
-        return view('guru.kokurikuler.kegiatan.index', compact('kelompok', 'kegiatanPilihan', 'kandidat'));
+        return view('guru.kokurikuler.kegiatan.index', compact('kelompok', 'items', 'kegiatanList'));
     }
 
+    /**
+     * TAMBAH kegiatan ke kelompok (pivot)
+     * (pastikan route kamu memang ada: guru.kokurikuler.kegiatan.store)
+     */
     public function store(Request $request, KkKelompok $kelompok)
     {
         $this->assertKoordinator($kelompok);
@@ -46,24 +58,37 @@ class KegiatanKelompokController extends Controller
             'kk_kegiatan_id' => 'required|exists:kk_kegiatan,id',
         ]);
 
-        KkKelompokKegiatan::firstOrCreate([
+        // cegah dobel (karena pivot kamu unique)
+        $sudahAda = KkKelompokKegiatan::where('kk_kelompok_id', $kelompok->id)
+            ->where('kk_kegiatan_id', $request->kk_kegiatan_id)
+            ->exists();
+
+        if ($sudahAda) {
+            return back()->with('success', 'Kegiatan sudah ada di kelompok ini.');
+        }
+
+        KkKelompokKegiatan::create([
             'kk_kelompok_id' => $kelompok->id,
             'kk_kegiatan_id' => $request->kk_kegiatan_id,
         ]);
 
-        return back()->with('success', 'Kegiatan berhasil ditambahkan ke kelompok');
+        return back()->with('success', 'Kegiatan berhasil ditambahkan.');
     }
 
-    public function destroy(KkKelompok $kelompok, $pivot)
+    /**
+     * HAPUS kegiatan dari kelompok (hapus pivot)
+     * (pastikan route kamu memang ada: guru.kokurikuler.kegiatan.destroy)
+     */
+    public function destroy(KkKelompok $kelompok, $pivotId)
     {
         $this->assertKoordinator($kelompok);
 
-        $row = KkKelompokKegiatan::where('kk_kelompok_id', $kelompok->id)
-            ->where('id', $pivot)
+        $pivot = KkKelompokKegiatan::where('kk_kelompok_id', $kelompok->id)
+            ->where('id', $pivotId)
             ->firstOrFail();
 
-        $row->delete();
+        $pivot->delete();
 
-        return back()->with('success', 'Kegiatan berhasil dihapus dari kelompok');
+        return back()->with('success', 'Kegiatan berhasil dihapus dari kelompok.');
     }
 }

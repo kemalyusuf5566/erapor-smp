@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Guru\Kokurikuler;
 
 use App\Http\Controllers\Controller;
-use App\Models\DataSiswa;
-use App\Models\KkCapaianAkhir;
 use App\Models\KkKelompok;
-use App\Models\KkKelompokAnggota;
+use App\Models\KkKegiatan;
 use App\Models\KkKelompokKegiatan;
+use App\Models\KkCapaianAkhir;
 use App\Models\KkNilai;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,92 +15,85 @@ class NilaiKokurikulerController extends Controller
 {
     private function assertKoordinator(KkKelompok $kelompok): void
     {
-        abort_unless($kelompok->koordinator_id === Auth::id(), 403, 'Bukan koordinator kelompok ini');
-    }
+        $user = Auth::user();
 
-    public function index(Request $request, KkKelompok $kelompok, $pivot)
-    {
-        $this->assertKoordinator($kelompok);
-
-        $kelompokKegiatan = KkKelompokKegiatan::with(['kegiatan', 'kelompok.kelas', 'kelompok.koordinator'])
-            ->where('kk_kelompok_id', $kelompok->id)
-            ->where('id', $pivot)
-            ->firstOrFail();
-
-        // dropdown capaian profil (capaian akhir)
-        $capaianList = KkCapaianAkhir::with('dimensi')
-            ->where('kk_kelompok_kegiatan_id', $kelompokKegiatan->id)
-            ->orderBy('id', 'asc')
-            ->get();
-
-        // pilih capaian aktif (dari querystring)
-        $selectedCapaianId = $request->get('capaian'); // boleh null
-
-        // anggota kelompok (siswa)
-        $anggotaIds = KkKelompokAnggota::where('kk_kelompok_id', $kelompok->id)
-            ->pluck('data_siswa_id');
-
-        $siswa = DataSiswa::whereIn('id', $anggotaIds)
-            ->orderBy('nama_siswa')
-            ->get();
-
-        // nilai yang sudah ada (per capaian)
-        $nilaiBySiswa = collect();
-
-        if ($selectedCapaianId) {
-            $nilaiBySiswa = KkNilai::where('kk_kelompok_id', $kelompok->id)
-                ->where('kk_kegiatan_id', $kelompokKegiatan->kk_kegiatan_id)
-                ->where('kk_capaian_akhir_id', $selectedCapaianId)
-                ->get()
-                ->keyBy('data_siswa_id');
+        if (!$user || (int) $kelompok->koordinator_id !== (int) $user->id) {
+            abort(403, 'Anda bukan koordinator kelompok ini');
         }
-
-        $predikatOptions = ['Kurang', 'Cukup', 'Baik', 'Sangat Baik'];
-
-        return view('guru.kokurikuler.nilai.index', compact(
-            'kelompok',
-            'kelompokKegiatan',
-            'capaianList',
-            'selectedCapaianId',
-            'siswa',
-            'nilaiBySiswa',
-            'predikatOptions'
-        ));
     }
 
-    public function store(Request $request, KkKelompok $kelompok, $pivot)
+    public function index(KkKelompok $kelompok, KkKegiatan $kegiatan)
     {
         $this->assertKoordinator($kelompok);
 
-        $kelompokKegiatan = KkKelompokKegiatan::where('kk_kelompok_id', $kelompok->id)
-            ->where('id', $pivot)
+        // pastikan kegiatan ini memang dipilih oleh kelompok (ambil pivotnya)
+        $pivot = KkKelompokKegiatan::where('kk_kelompok_id', $kelompok->id)
+            ->where('kk_kegiatan_id', $kegiatan->id)
             ->firstOrFail();
 
+        // capaian akhir berdasarkan pivot kelompok-kegiatan (yang kamu buat sudah)
+        $capaianAkhir = KkCapaianAkhir::with('dimensi')
+            ->where('kk_kelompok_kegiatan_id', $pivot->id)
+            ->orderBy('kk_dimensi_id')
+            ->orderBy('id')
+            ->get();
+
+        // anggota kelompok + siswa
+        $anggota = $kelompok->anggota()->with('siswa')->get();
+
+        // nilai yang sudah tersimpan (jika ada)
+        $nilaiRows = KkNilai::where('kk_kelompok_id', $kelompok->id)
+            ->where('kk_kegiatan_id', $kegiatan->id)
+            ->get()
+            ->keyBy('data_siswa_id');
+
+        // opsi predikat dropdown (silakan kamu ubah kalau kamu punya standar lain)
+        $opsiPredikat = [
+            'SB' => 'Sangat Baik',
+            'B'  => 'Baik',
+            'C'  => 'Cukup',
+            'PB' => 'Perlu Bimbingan',
+        ];
+
+        return view('guru.kokurikuler.nilai.index', [
+            'kelompok'      => $kelompok->load(['kelas', 'koordinator']),
+            'kegiatan'      => $kegiatan,
+            'pivot'         => $pivot,          // kalau nanti kamu butuh tampilkan id pivot
+            'capaianAkhir'  => $capaianAkhir,
+            'anggota'       => $anggota,
+            'nilaiRows'     => $nilaiRows,
+            'opsiPredikat'  => $opsiPredikat,
+        ]);
+    }
+
+    public function update(Request $request, KkKelompok $kelompok, KkKegiatan $kegiatan)
+    {
+        $this->assertKoordinator($kelompok);
+
+        // validasi longgar dulu biar kamu bisa jalan (nanti kalau mau diperketat bisa)
         $request->validate([
-            'kk_capaian_akhir_id' => 'required|exists:kk_capaian_akhir,id',
-            'predikat'            => 'required|array',
-            'predikat.*'          => 'nullable|in:Kurang,Cukup,Baik,Sangat Baik',
+            'nilai' => 'required|array',
         ]);
 
-        $kkCapaianAkhirId = (int) $request->kk_capaian_akhir_id;
+        foreach ($request->input('nilai', []) as $siswaId => $row) {
+            // kalau tidak dipilih apa-apa, boleh skip
+            $kkCapaianAkhirId = $row['kk_capaian_akhir_id'] ?? null;
+            $predikat         = $row['predikat'] ?? null;
 
-        foreach ($request->predikat as $dataSiswaId => $predikat) {
-            // boleh kosong -> skip (atau simpan null)
             KkNilai::updateOrCreate(
                 [
-                    'kk_kelompok_id'      => $kelompok->id,
-                    'kk_kegiatan_id'      => $kelompokKegiatan->kk_kegiatan_id,
-                    'data_siswa_id'       => $dataSiswaId,
-                    'kk_capaian_akhir_id' => $kkCapaianAkhirId,
+                    'kk_kelompok_id' => $kelompok->id,
+                    'kk_kegiatan_id' => $kegiatan->id,
+                    'data_siswa_id'  => (int) $siswaId,
                 ],
                 [
-                    'predikat' => $predikat,
+                    // pastikan kolom ini memang ada di tabel kk_nilai kamu
+                    'kk_capaian_akhir_id' => $kkCapaianAkhirId ?: null,
+                    'predikat'            => $predikat ?: null,
                 ]
             );
         }
 
-        return redirect()
-            ->route('guru.kokurikuler.nilai.index', [$kelompok->id, $kelompokKegiatan->id, 'capaian' => $kkCapaianAkhirId])
-            ->with('success', 'Nilai kokurikuler berhasil disimpan');
+        return back()->with('success', 'Nilai kokurikuler berhasil disimpan.');
     }
 }

@@ -13,6 +13,7 @@ class DataKelasController extends Controller
     {
         $user = Auth::user();
 
+        // Ambil hanya kelas yang dia walikan
         $kelas = DataKelas::withCount('siswa')
             ->where('wali_kelas_id', $user->id)
             ->get();
@@ -20,13 +21,12 @@ class DataKelasController extends Controller
         return view('guru.wali_kelas.data_kelas.index', compact('kelas'));
     }
 
-    public function detail($kelasId)
+    public function detail($id)
     {
         $user = Auth::user();
 
-        $kelas = DataKelas::where('id', $kelasId)
-            ->where('wali_kelas_id', $user->id)
-            ->firstOrFail();
+        $kelas = DataKelas::where('wali_kelas_id', $user->id)
+            ->findOrFail($id);
 
         $siswa = DataSiswa::where('data_kelas_id', $kelas->id)->get();
 

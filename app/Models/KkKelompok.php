@@ -36,7 +36,7 @@ class KkKelompok extends Model
             'kk_kelompok_kegiatan',
             'kk_kelompok_id',
             'kk_kegiatan_id'
-        );
+        )->withPivot('id');
     }
 
     public function nilai()

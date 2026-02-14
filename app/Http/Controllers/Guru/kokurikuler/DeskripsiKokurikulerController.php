@@ -6,70 +6,64 @@ use App\Http\Controllers\Controller;
 use App\Models\KkKelompok;
 use App\Models\KkKegiatan;
 use App\Models\KkNilai;
-use App\Models\KkKelompokAnggota;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class DeskripsiKokurikulerController extends Controller
 {
-    public function index(Request $request, $kelompokId, $kegiatanId)
+    private function assertKoordinator(KkKelompok $kelompok): void
     {
         $user = Auth::user();
 
-        // Pastikan kelompok ini milik koordinator yang login
-        $kelompok = KkKelompok::with(['kelas', 'koordinator'])
-            ->where('id', $kelompokId)
-            ->where('koordinator_id', $user->id)
-            ->firstOrFail();
+        if (!$user || (int) $kelompok->koordinator_id !== (int) $user->id) {
+            abort(403, 'Anda bukan koordinator kelompok ini');
+        }
+    }
 
-        $kegiatan = KkKegiatan::findOrFail($kegiatanId);
+    public function index(KkKelompok $kelompok, KkKegiatan $kegiatan)
+    {
+        $this->assertKoordinator($kelompok);
 
-        // Ambil anggota kelompok (siswa)
-        $anggota = KkKelompokAnggota::with('siswa')
-            ->where('kk_kelompok_id', $kelompok->id)
-            ->get();
+        // anggota + siswa
+        $anggota = $kelompok->anggota()->with('siswa')->get();
 
-        // Ambil nilai per siswa untuk kegiatan ini (kalau belum ada, nanti dibuat saat update)
-        $nilaiBySiswa = KkNilai::where('kk_kelompok_id', $kelompok->id)
+        // nilai per siswa untuk kegiatan ini
+        $nilaiRows = KkNilai::where('kk_kelompok_id', $kelompok->id)
             ->where('kk_kegiatan_id', $kegiatan->id)
             ->get()
             ->keyBy('data_siswa_id');
 
         return view('guru.kokurikuler.deskripsi.index', [
-            'kelompok' => $kelompok,
-            'kegiatan' => $kegiatan,
-            'anggota' => $anggota,
-            'nilaiBySiswa' => $nilaiBySiswa,
+            'kelompok'  => $kelompok->load(['kelas', 'koordinator']),
+            'kegiatan'  => $kegiatan,
+            'anggota'   => $anggota,
+            'nilaiRows' => $nilaiRows,
         ]);
     }
 
-    public function update(Request $request, $kelompokId, $kegiatanId)
+    public function update(Request $request, KkKelompok $kelompok, KkKegiatan $kegiatan)
     {
-        $user = Auth::user();
+        $this->assertKoordinator($kelompok);
 
-        $kelompok = KkKelompok::where('id', $kelompokId)
-            ->where('koordinator_id', $user->id)
-            ->firstOrFail();
+        $request->validate([
+            'deskripsi' => 'required|array',
+        ]);
 
-        $kegiatan = KkKegiatan::findOrFail($kegiatanId);
-
-        $deskripsi = $request->input('deskripsi', []); // [data_siswa_id => text]
-
-        foreach ($deskripsi as $siswaId => $text) {
+        foreach ($request->input('deskripsi', []) as $siswaId => $text) {
+            // pastikan row kk_nilai ada; kalau belum ada, buat dulu
             KkNilai::updateOrCreate(
                 [
                     'kk_kelompok_id' => $kelompok->id,
                     'kk_kegiatan_id' => $kegiatan->id,
-                    'data_siswa_id'  => $siswaId,
+                    'data_siswa_id'  => (int) $siswaId,
                 ],
                 [
-                    'deskripsi' => $text,
+                    // kolom lain boleh null dulu
+                    'deskripsi' => $text ?: null,
                 ]
             );
         }
 
-        return redirect()
-            ->route('guru.kokurikuler.deskripsi.index', [$kelompok->id, $kegiatan->id])
-            ->with('success', 'Deskripsi kokurikuler berhasil disimpan.');
+        return back()->with('success', 'Deskripsi kokurikuler berhasil disimpan.');
     }
 }
