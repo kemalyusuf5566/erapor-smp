@@ -1,80 +1,125 @@
 @extends('layouts.adminlte')
-@section('page_title','Anggota Ekskul')
+
+@section('title', 'Kelola Ekskul')
 
 @section('content')
-@if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
+<div class="container-fluid">
+  <h4 class="mb-2">Kelola Anggota Ekskul</h4>
+  <div class="mb-3">
+    <b>Ekskul:</b> {{ $ekskul->nama_ekskul ?? $ekskul->nama_ekstrakurikuler ?? '-' }}
+  </div>
 
-<div class="card">
-  <div class="card-body">
-    <div class="mb-3">
-      <b>Ekstrakurikuler:</b> {{ $ekskul->nama_ekskul }} <br>
-      <b>Pembina:</b> {{ $ekskul->pembina->nama ?? '-' }}
+  @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="POST" action="{{ route('guru.ekskul.anggota.store', $ekskul->id) }}">
+        @csrf
+        <div class="row">
+          <div class="col-md-8">
+            <select name="data_siswa_id" class="form-control" required>
+              <option value="">- Pilih Siswa -</option>
+              @foreach($siswa as $s)
+                <option value="{{ $s->id }}">
+                  {{ $s->nama_siswa }} ({{ $s->kelas->nama_kelas ?? '-' }})
+                </option>
+              @endforeach
+            </select>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-primary w-100" type="submit">Tambah Anggota</button>
+          </div>
+        </div>
+      </form>
     </div>
+  </div>
 
-    {{-- Tambah anggota (opsional) --}}
-    <form method="POST" action="{{ route('guru.ekskul.anggota.store', $ekskul->id) }}" class="form-inline mb-3">
-      @csrf
-      <select name="data_siswa_id" class="form-control mr-2">
-        @foreach($siswaList as $s)
-          <option value="{{ $s->id }}">
-            {{ $s->nama_siswa }} ({{ $s->kelas->nama_kelas ?? '-' }})
-          </option>
-        @endforeach
-      </select>
-      <button class="btn btn-success">Tambah Anggota</button>
-    </form>
+  {{-- FORM UPDATE (BULK SIMPAN NILAI/DESKRIPSI) --}}
+  <form method="POST" action="{{ route('guru.ekskul.anggota.update', $ekskul->id) }}">
+    @csrf
 
-    <form method="POST" action="{{ route('guru.ekskul.anggota.update', $ekskul->id) }}">
-      @csrf
-
-      <div class="table-responsive">
+    <div class="card">
+      <div class="card-body table-responsive">
         <table class="table table-bordered table-sm">
           <thead>
             <tr>
-              <th width="60">No</th>
-              <th>Nama</th>
-              <th width="150">NIS</th>
-              <th width="120">Kelas</th>
-              <th width="160">Predikat</th>
+              <th style="width:60px;">No</th>
+              <th>Nama Siswa</th>
+              <th style="width:110px;">Predikat</th>
               <th>Deskripsi</th>
-              <th width="90">Hapus</th>
+              <th style="width:110px;">Aksi</th>
             </tr>
           </thead>
           <tbody>
             @forelse($anggota as $i => $a)
-            <tr>
-              <td>{{ $i+1 }}</td>
-              <td>{{ $a->siswa->nama_siswa ?? '-' }}</td>
-              <td>{{ $a->siswa->nis ?? '-' }}</td>
-              <td>{{ $a->siswa->kelas->nama_kelas ?? '-' }}</td>
-              <td>
-                <select name="predikat[{{ $a->id }}]" class="form-control">
-                  <option value="">-</option>
-                  @foreach(['kurang','cukup','baik','sangat baik'] as $p)
-                    <option value="{{ $p }}" @selected($a->predikat === $p)>{{ ucfirst($p) }}</option>
-                  @endforeach
-                </select>
-              </td>
-              <td>
-                <input type="text" class="form-control" name="deskripsi[{{ $a->id }}]" value="{{ $a->deskripsi }}">
-              </td>
-              <td>
-                <form method="POST" action="{{ route('guru.ekskul.anggota.destroy', [$ekskul->id, $a->id]) }}">
-                  @csrf @method('DELETE')
-                  <button class="btn btn-danger btn-sm" onclick="return confirm('Hapus anggota?')">Hapus</button>
-                </form>
-              </td>
-            </tr>
+              @php
+                $opsi = [
+                  'Sangat Baik',
+                  'Baik',
+                  'Cukup',
+                  'Kurang',
+                ];
+              @endphp
+
+              <tr>
+                <td>{{ $i+1 }}</td>
+                <td>{{ $a->siswa->nama_siswa ?? '-' }}</td>
+
+                <td>
+                  <select name="nilai[{{ $a->id }}][predikat]" class="form-control form-control-sm">
+                   <option value="">-</option>
+                    @foreach($opsi as $op)
+                      <option value="{{ $op }}" @selected(($a->predikat ?? '') === $op)>{{ $op }}</option>
+                    @endforeach
+                  </select>
+                </td>
+
+                <td>
+                  <input type="text"
+                         name="nilai[{{ $a->id }}][deskripsi]"
+                         value="{{ $a->deskripsi ?? '' }}"
+                         class="form-control form-control-sm"
+                         placeholder="Deskripsi ekskul...">
+                </td>
+
+                <td class="text-center">
+                  {{-- tombol hapus submit ke form terpisah (tanpa nested form) --}}
+                  <button type="submit"
+                          form="del-anggota-{{ $a->id }}"
+                          class="btn btn-danger btn-sm"
+                          onclick="return confirm('Hapus anggota ini?')">
+                    Hapus
+                  </button>
+                </td>
+              </tr>
             @empty
-            <tr><td colspan="7" class="text-center text-muted">Belum ada anggota ekskul.</td></tr>
+              <tr>
+                <td colspan="5" class="text-center">Belum ada anggota.</td>
+              </tr>
             @endforelse
           </tbody>
         </table>
+
+        <div class="text-right">
+          <button class="btn btn-success" type="submit">Simpan Nilai/Deskripsi</button>
+        </div>
       </div>
+    </div>
 
-      <button class="btn btn-primary">Simpan</button>
+  </form>
+
+  {{-- FORM DELETE DITARUH DI LUAR FORM UPDATE (PENTING!) --}}
+  @foreach($anggota as $a)
+    <form id="del-anggota-{{ $a->id }}"
+          method="POST"
+          action="{{ route('guru.ekskul.anggota.destroy', [$ekskul->id, $a->id]) }}"
+          style="display:none;">
+      @csrf
+      @method('DELETE')
     </form>
+  @endforeach
 
-  </div>
 </div>
 @endsection

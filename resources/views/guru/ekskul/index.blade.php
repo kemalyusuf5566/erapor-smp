@@ -1,38 +1,42 @@
 @extends('layouts.adminlte')
-@section('page_title','Pembina Ekskul')
+
+@section('title', 'Ekskul Binaan')
 
 @section('content')
-@if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
+<div class="container-fluid">
+  <h4 class="mb-3">Ekskul Binaan Saya</h4>
 
-<div class="card">
-  <div class="card-body">
-    <div class="table-responsive">
+  @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+  @endif
+
+  <div class="card">
+    <div class="card-body table-responsive">
       <table class="table table-bordered table-sm">
         <thead>
           <tr>
-            <th width="60">No</th>
-            <th>Nama Ekstrakurikuler</th>
+            <th style="width:60px;">No</th>
+            <th>Nama Ekskul</th>
             <th>Pembina</th>
-            <th width="140">Jumlah Anggota</th>
-            <th width="120">Aksi</th>
+            <th style="width:180px;">Aksi</th>
           </tr>
         </thead>
         <tbody>
-          @forelse($ekskul as $i => $e)
+          @forelse($ekskul as $i => $row)
           <tr>
             <td>{{ $i+1 }}</td>
-            <td>{{ $e->nama_ekskul }}</td>
-            <td>{{ $e->pembina->nama ?? '-' }}</td>
-            <td>{{ $e->anggota_count }}</td>
+            <td>{{ $row->nama_ekskul ?? $row->nama_ekstrakurikuler ?? '-' }}</td>
+            <td>{{ $row->pembina_nama ?? '-' }}</td>
             <td>
-              <a class="btn btn-primary btn-sm"
-                 href="{{ route('guru.ekskul.anggota.index', $e->id) }}">
-                Kelola
+              <a href="{{ route('guru.ekskul.anggota.index', $row->id) }}" class="btn btn-primary btn-sm">
+                Kelola Anggota & Nilai
               </a>
             </td>
           </tr>
           @empty
-          <tr><td colspan="5" class="text-center text-muted">Tidak ada ekskul binaan.</td></tr>
+          <tr>
+            <td colspan="4" class="text-center">Anda belum ditetapkan sebagai pembina ekskul.</td>
+          </tr>
           @endforelse
         </tbody>
       </table>

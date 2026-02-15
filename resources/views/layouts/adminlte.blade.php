@@ -47,18 +47,30 @@
         $role = $user?->peran?->nama_peran;
 
         // ====== ROLE DINAMIS (SAMAKAN POLA WALI KELAS) ======
+        $isWali = $user
+            ? \App\Models\DataKelas::where('wali_kelas_id', $user->id)->exists()
+            : false;
 
-    $isWali = $user
-        ? \App\Models\DataKelas::where('wali_kelas_id', $user->id)->exists()
-        : false;
+        $isKoordinator = $user
+            ? \App\Models\KkKelompok::where('koordinator_id', $user->id)->exists()
+            : false;
 
-    $isKoordinator = $user
-        ? \App\Models\KkKelompok::where('koordinator_id', $user->id)->exists()
-        : false;
+        $isPembina = false;
 
-    $isPembina = $user
-        ? \App\Models\DataEkstrakurikuler::where('pembina_id', $user->id)->exists()
-        : false;
+        if ($user) {
+
+            $guruRow = \App\Models\DataGuru::where('pengguna_id', $user->id)->first();
+            $guruId  = $guruRow?->id;
+
+            $isPembinaByUserId = \App\Models\DataEkstrakurikuler::where('pembina_id', $user->id)->exists();
+
+            $isPembinaByGuruId = $guruId
+                ? \App\Models\DataEkstrakurikuler::where('pembina_id', $guruId)->exists()
+                : false;
+
+            $isPembina = $isPembinaByUserId || $isPembinaByGuruId;
+        }
+
       @endphp
 
       <nav class="mt-2">
@@ -149,7 +161,7 @@
             </ul>
           </li>
 
-          {{-- EKSTRAKURIKULER (TERPISAH & KEMBALI ADA) --}}
+          {{-- EKSTRAKURIKULER --}}
           <li class="nav-item has-treeview">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-futbol"></i>
@@ -226,8 +238,10 @@
 
           @endif
           {{-- =============== END ADMIN =============== --}}
-         {{-- ================= GURU ================= --}}
-        @if($role === 'guru_mapel')
+
+
+          {{-- ================= GURU ================= --}}
+          @if($role === 'guru_mapel')
 
           {{-- DASHBOARD GURU --}}
           <li class="nav-item">
@@ -247,27 +261,12 @@
 
           {{-- KOKURIKULER --}}
           @if($isKoordinator)
-            @php
-              // fallback: cari route kokurikuler yang BENAR-BENAR ada
-              $kokuriRoute = null;
-
-              if (\Illuminate\Support\Facades\Route::has('guru.kokurikuler.index')) {
-                  $kokuriRoute = route('guru.kokurikuler.index');
-              } elseif (\Illuminate\Support\Facades\Route::has('guru.kokurikuler.anggota.index')) {
-                  // ini route yang kamu PASTI punya dari route:list
-                  // tapi butuh parameter {kelompok}, jadi tidak bisa dipakai untuk link menu utama
-                  $kokuriRoute = null;
-              }
-            @endphp
-
-            @if($kokuriRoute)
-              <li class="nav-item">
-                <a href="{{ $kokuriRoute }}" class="nav-link">
-                  <i class="nav-icon fas fa-layer-group"></i>
-                  <p>Kokurikuler</p>
-                </a>
-              </li>
-            @endif
+          <li class="nav-item">
+            <a href="{{ route('guru.kokurikuler.index') }}" class="nav-link">
+              <i class="nav-icon fas fa-layer-group"></i>
+              <p>Kokurikuler</p>
+            </a>
+          </li>
           @endif
 
           {{-- PEMBINA EKSKUL --}}
@@ -280,78 +279,88 @@
           </li>
           @endif
 
-          {{-- WALI KELAS (KONDISIONAL) --}}
-          @php
-            $isWali = $user ? \App\Models\DataKelas::where('wali_kelas_id', $user->id)->exists() : false;
-          @endphp
 
-          @if(
-            $user
-            && ($user->hasRole('wali_kelas') || $isWali)
-            && \Illuminate\Support\Facades\Route::has('guru.wali-kelas.data-kelas.index')
-          )
-            <li class="nav-item has-treeview">
-              <a href="#" class="nav-link">
-                <i class="nav-icon fas fa-user-tie"></i>
-                <p>
-                  Wali Kelas
-                  <i class="right fas fa-angle-left"></i>
-                </p>
-              </a>
+          {{-- ===================== WALI KELAS (REVISI MENU) ===================== --}}
+          @if($user && ($user->hasRole('wali_kelas') || $isWali))
+          <li class="nav-item has-treeview">
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-user-tie"></i>
+              <p>
+                Wali Kelas
+                <i class="right fas fa-angle-left"></i>
+              </p>
+            </a>
 
-              <ul class="nav nav-treeview">
+            <ul class="nav nav-treeview">
 
-                <li class="nav-item">
-                  <a href="{{ route('guru.wali-kelas.data-kelas.index') }}" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Data Kelas</p>
-                  </a>
-                </li>
+              {{-- SUBMENU 1: DATA-DATA --}}
+              <li class="nav-item has-treeview">
+                <a href="#" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>
+                    Data-data
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
 
-                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.ketidakhadiran.index'))
-                <li class="nav-item">
-                  <a href="{{ route('guru.wali-kelas.ketidakhadiran.index') }}" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Ketidakhadiran</p>
-                  </a>
-                </li>
-                @endif
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="{{ route('guru.wali-kelas.data-kelas.index') }}" class="nav-link">
+                      <i class="far fa-dot-circle nav-icon"></i>
+                      <p>Data Kelas</p>
+                    </a>
+                  </li>
 
-                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.catatan.index'))
-                <li class="nav-item">
-                  <a href="{{ route('guru.wali-kelas.catatan.index') }}" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Catatan Wali Kelas</p>
-                  </a>
-                </li>
-                @endif
+                  <li class="nav-item">
+                    <a href="{{ route('guru.wali-kelas.ketidakhadiran.index') }}" class="nav-link">
+                      <i class="far fa-dot-circle nav-icon"></i>
+                      <p>Ketidakhadiran</p>
+                    </a>
+                  </li>
 
-                {{-- Rapor Wali Kelas (baru tampil kalau routenya sudah ada) --}}
-                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.rapor.leger.index'))
-                <li class="nav-item">
-                  <a href="{{ route('guru.wali-kelas.rapor.leger.index') }}" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Leger Nilai</p>
-                  </a>
-                </li>
-                @endif
+                  <li class="nav-item">
+                    <a href="{{ route('guru.wali-kelas.catatan.index') }}" class="nav-link">
+                      <i class="far fa-dot-circle nav-icon"></i>
+                      <p>Catatan Wali Kelas</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
 
-                @if(\Illuminate\Support\Facades\Route::has('guru.wali-kelas.rapor.cetak.index'))
-                <li class="nav-item">
-                  <a href="{{ route('guru.wali-kelas.rapor.cetak.index') }}" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Cetak Rapor</p>
-                  </a>
-                </li>
-                @endif
+              {{-- SUBMENU 2: RAPOR --}}
+              <li class="nav-item has-treeview">
+                <a href="#" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>
+                    Rapor
+                    <i class="right fas fa-angle-left"></i>
+                  </p>
+                </a>
 
-              </ul>
-            </li>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="{{ route('guru.wali-kelas.rapor.leger.index') }}" class="nav-link">
+                      <i class="far fa-dot-circle nav-icon"></i>
+                      <p>Leger Nilai</p>
+                    </a>
+                  </li>
+
+                  <li class="nav-item">
+                    <a href="{{ route('guru.wali-kelas.rapor.cetak.index') }}" class="nav-link">
+                      <i class="far fa-dot-circle nav-icon"></i>
+                      <p>Cetak Rapor</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+
+            </ul>
+          </li>
           @endif
+          {{-- =================== END WALI KELAS (REVISI) =================== --}}
 
-        @endif
-        {{-- =============== END GURU =============== --}}
-
+          @endif
+          {{-- =============== END GURU =============== --}}
 
         </ul>
       </nav>

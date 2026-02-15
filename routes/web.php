@@ -285,6 +285,18 @@ Route::middleware(['auth', 'role:guru_mapel'])
             Route::get('catatan', [CatatanWaliKelasController::class, 'index'])->name('catatan.index');
             Route::get('catatan/{kelas}', [CatatanWaliKelasController::class, 'kelola'])->name('catatan.kelola');
             Route::post('catatan/{kelas}', [CatatanWaliKelasController::class, 'update'])->name('catatan.update');
+
+
+            Route::prefix('rapor')->name('rapor.')->group(function () {
+
+                // LEGER NILAI
+                Route::get('leger', [\App\Http\Controllers\Guru\WaliKelas\Rapor\LegerNilaiController::class, 'index'])
+                    ->name('leger.index');
+
+                // CETAK RAPOR
+                Route::get('cetak', [\App\Http\Controllers\Guru\WaliKelas\Rapor\CetakRaporController::class, 'index'])
+                    ->name('cetak.index');
+            });
         });
     });
 

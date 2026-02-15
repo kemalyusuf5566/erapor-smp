@@ -4,90 +4,124 @@ namespace App\Http\Controllers\Guru;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataEkstrakurikuler;
-use App\Models\DataSiswa;
+use App\Models\DataGuru;
 use App\Models\EkskulAnggota;
+use App\Models\DataSiswa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class EkskulAnggotaController extends Controller
 {
-    public function index($ekskulId)
+    /**
+     * Ambil ID guru yang terkait dengan user login (pengguna).
+     * NOTE: kalau kolom relasi di data_guru bukan "pengguna_id", ganti di sini.
+     */
+    private function getGuruIdByUser(): ?int
     {
-        $user = Auth::user();
+        $userId = Auth::id();
 
-        $ekskul = DataEkstrakurikuler::with('pembina')
-            ->where('id', $ekskulId)
-            ->where('pembina_id', $user->id)
-            ->firstOrFail();
-
-        $anggota = EkskulAnggota::with(['siswa.kelas'])
-            ->where('data_ekstrakurikuler_id', $ekskul->id)
-            ->get();
-
-        // untuk tambah anggota (opsional)
-        $siswaList = DataSiswa::with('kelas')->get();
-
-        return view('guru.ekskul.anggota.index', compact('ekskul', 'anggota', 'siswaList'));
+        return DataGuru::where('pengguna_id', $userId)->value('id'); // <-- kalau beda, ubah kolom ini
     }
 
-    public function store(Request $request, $ekskulId)
+    /**
+     * Samakan pola validasi pembina:
+     * pembina_id boleh menyimpan:
+     * - pengguna.id  (langsung match auth()->id())
+     * - ATAU data_guru.id (match guru yang punya pengguna_id = auth()->id())
+     */
+    private function assertPembina(DataEkstrakurikuler $ekskul): void
     {
-        $user = Auth::user();
+        $userId = (int) Auth::id();
+        $guruId = $this->getGuruIdByUser(); // bisa null
 
-        $ekskul = DataEkstrakurikuler::where('id', $ekskulId)
-            ->where('pembina_id', $user->id)
-            ->firstOrFail();
+        $pembinaId = (int) ($ekskul->pembina_id ?? 0);
+
+        $ok = ($pembinaId === $userId) || ($guruId && $pembinaId === (int) $guruId);
+
+        if (! $ok) {
+            abort(403, 'Anda bukan pembina ekskul ini.');
+        }
+    }
+
+    public function index(DataEkstrakurikuler $ekskul)
+    {
+        $this->assertPembina($ekskul);
+
+        $anggota = EkskulAnggota::with('siswa')
+            ->where('data_ekstrakurikuler_id', $ekskul->id)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        // kolom siswa kamu: nama_siswa (bukan nama)
+        $siswa = DataSiswa::with('kelas')->orderBy('nama_siswa')->get();
+
+        return view('guru.ekskul.anggota.index', compact('ekskul', 'anggota', 'siswa'));
+    }
+
+    public function store(Request $request, DataEkstrakurikuler $ekskul)
+    {
+        $this->assertPembina($ekskul);
 
         $request->validate([
-            'data_siswa_id' => 'required|exists:data_siswa,id',
+            'data_siswa_id' => ['required', 'integer', 'exists:data_siswa,id'],
         ]);
 
         EkskulAnggota::firstOrCreate([
             'data_ekstrakurikuler_id' => $ekskul->id,
-            'data_siswa_id' => $request->data_siswa_id,
+            'data_siswa_id'           => (int) $request->data_siswa_id,
         ]);
 
         return back()->with('success', 'Anggota berhasil ditambahkan.');
     }
 
-    public function update(Request $request, $ekskulId)
+    public function update(Request $request, DataEkstrakurikuler $ekskul)
     {
-        $user = Auth::user();
+        $this->assertPembina($ekskul);
 
-        $ekskul = DataEkstrakurikuler::where('id', $ekskulId)
-            ->where('pembina_id', $user->id)
-            ->firstOrFail();
+        // OPSI PREDIKAT LENGKAP
+        $allowed = [
+            'Sangat Baik',
+            'Baik',
+            'Cukup',
+            'Kurang',
+        ];
 
-        $predikat = $request->input('predikat', []);
-        $deskripsi = $request->input('deskripsi', []);
+        foreach ($request->input('nilai', []) as $anggotaId => $row) {
 
-        foreach ($predikat as $anggotaId => $value) {
-            $row = EkskulAnggota::where('id', $anggotaId)
+            $anggota = EkskulAnggota::where('id', $anggotaId)
                 ->where('data_ekstrakurikuler_id', $ekskul->id)
                 ->first();
 
-            if ($row) {
-                $row->update([
-                    'predikat' => $value,
-                    'deskripsi' => $deskripsi[$anggotaId] ?? null,
-                ]);
+            if (! $anggota) {
+                continue;
             }
+
+            $predikat  = $row['predikat'] ?? null;
+            $deskripsi = $row['deskripsi'] ?? null;
+
+            // validasi predikat manual
+            if ($predikat !== null && $predikat !== '' && !in_array($predikat, $allowed, true)) {
+                $predikat = null;
+            }
+
+            $anggota->predikat  = ($predikat === '' ? null : $predikat);
+            $anggota->deskripsi = $deskripsi;
+            $anggota->save();
         }
 
-        return back()->with('success', 'Data anggota ekskul berhasil disimpan.');
+        return back()->with('success', 'Perubahan anggota berhasil disimpan.');
     }
 
-    public function destroy($ekskulId, $anggotaId)
+
+    public function destroy(DataEkstrakurikuler $ekskul, EkskulAnggota $anggota)
     {
-        $user = Auth::user();
+        $this->assertPembina($ekskul);
 
-        $ekskul = DataEkstrakurikuler::where('id', $ekskulId)
-            ->where('pembina_id', $user->id)
-            ->firstOrFail();
+        if ((int) $anggota->data_ekstrakurikuler_id !== (int) $ekskul->id) {
+            abort(404);
+        }
 
-        EkskulAnggota::where('id', $anggotaId)
-            ->where('data_ekstrakurikuler_id', $ekskul->id)
-            ->delete();
+        $anggota->delete();
 
         return back()->with('success', 'Anggota berhasil dihapus.');
     }
